@@ -1,113 +1,81 @@
-
-// const { clientId, guildId, token, publicKey } = require('./config.json');
-require('dotenv').config()
-const APPLICATION_ID = process.env.APPLICATION_ID 
-const TOKEN = process.env.TOKEN 
-const PUBLIC_KEY = process.env.PUBLIC_KEY || 'not set'
-const GUILD_ID = process.env.GUILD_ID 
+import DiscordJS, { Intents } from "discord.js"
 
 
-const axios = require('axios')
-const express = require('express');
-const { InteractionType, InteractionResponseType, verifyKeyMiddleware } = require('discord-interactions');
-
-
-const app = express();
-// app.use(bodyParser.json());
-
-const discord_api = axios.create({
-  baseURL: 'https://discord.com/api/',
-  timeout: 3000,
-  headers: {
-	"Access-Control-Allow-Origin": "*",
-	"Access-Control-Allow-Methods": "GET, POST, PUT, DELETE",
-	"Access-Control-Allow-Headers": "Authorization",
-	"Authorization": `Bot ${TOKEN}`
-  }
+const Client = new DiscordJS.Client({
+  intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES]
 });
 
+Client.on("ready", () => {
+  console.log("bot is ready")
+})
 
-
-
-app.post('/interactions', verifyKeyMiddleware(PUBLIC_KEY), async (req, res) => {
-  const interaction = req.body;
-
-  if (interaction.type === InteractionType.APPLICATION_COMMAND) {
-    console.log(interaction.data.name)
-    if(interaction.data.name == 'yo'){
-      return res.send({
-        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-        data: {
-          content: `Yo ${interaction.member.user.username}!`,
-        },
-      });
+Client.on('messageDelete', async function(message, channel){
+    console.log(message.author)
+    var attachments = []
+    var x = []
+    message.attachments.forEach((e) => {
+      x.push(e)
+    })
+    message.stickers.forEach((e) => {
+      const file = new DiscordJS.MessageAttachment(e.url,e.name)
+      attachments.push(file)
+    })
+    for (const e of x){
+      const file = new DiscordJS.MessageAttachment(e.url,e.name)
+      attachments.push(file)
     }
 
-    if(interaction.data.name == 'dm'){
-      // https://discord.com/developers/docs/resources/user#create-dm
-      let c = (await discord_api.post(`/users/@me/channels`,{
-        recipient_id: interaction.member.user.id
-      })).data
-      try{
-        // https://discord.com/developers/docs/resources/channel#create-message
-        let res = await discord_api.post(`/channels/${c.id}/messages`,{
-          content:'Yo! I got your slash command. I am not able to respond to DMs just slash commands.',
-        })
-        console.log(res.data)
-      }catch(e){
-        console.log(e)
-      }
+    
+    var embed = {"fields":[
+    {"name":"details","value":`user id: ${message.author.id}\nchannel: <#${message.channel.id}>\n timestamp: ${message.createdAt}`,"inline":false}
+    ],
+    "title":`Message Deleted in #${message.channel.name}`,
+    "description":`${message.author.tag}: ${message.content}`,
+    "author":{"name":"message logging"},
+    "color":16711680,"footer":{"text":"modUtils"}}
 
-      return res.send({
-        // https://discord.com/developers/docs/interactions/receiving-and-responding#responding-to-an-interaction
-        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-        data:{
-          content:'👍'
-        }
-      });
-    }
-  }
-
+    const Channel = Client.channels.cache.get('935818459600801813');
+    Channel.send({ embeds: [embed], files: attachments});
 });
 
-
-
-app.get('/register_commands', async (req,res) =>{
-  let slash_commands = [
-    {
-      "name": "yo",
-      "description": "replies with Yo!",
-      "options": []
-    },
-    {
-      "name": "dm",
-      "description": "sends user a DM",
-      "options": []
+Client.on('messageUpdate', (oldmessage, newmessage) => {
+  var oldattachments = []
+  var newattachments = []
+  var oldx =[]
+  var newx = []
+  oldmessage.attachments.forEach((e) => {
+      oldx.push(e)
+    })
+  oldmessage.stickers.forEach((e) => {
+      const file = new DiscordJS.MessageAttachment(e.url,e.name)
+      oldattachments.push(file)
+    })
+    for (const e of oldx){
+      const file = new DiscordJS.MessageAttachment(e.url,e.name)
+      oldattachments.push(file)
     }
-  ]
-  try
-  {
-    // api docs - https://discord.com/developers/docs/interactions/application-commands#create-global-application-command
-    let discord_response = await discord_api.put(
-      `/applications/${APPLICATION_ID}/guilds/${GUILD_ID}/commands`,
-      slash_commands
-    )
-    console.log(discord_response.data)
-    return res.send('commands have been registered')
-  }catch(e){
-    console.error(e.code)
-    console.error(e.response?.data)
-    return res.send(`${e.code} error from discord`)
-  }
-})
 
+  newmessage.attachments.forEach((e) => {
+      newx.push(e)
+    })
+  newmessage.stickers.forEach((e) => {
+      const file = new DiscordJS.MessageAttachment(e.url,e.name)
+      attachments.push(file)
+    })
+    for (const e of newx){
+      const file = new DiscordJS.MessageAttachment(e.url,e.name)
+      newattachments.push(file)
+    }
 
-app.get('/', async (req,res) =>{
-  return res.send('Follow documentation ')
-})
+    const e1 = {"title":`Message Edited in #${oldmessage.channel.name}`,"color":11390719}
+    const e2 = {"fields":[{"name":"details","value":`user id: ${oldmessage.author.id}\nchannel: <#${oldmessage.channel.id}>\ntimestamp: ${oldmessage.createdAt}`,"inline":false}],"title":"old message:","description":`${oldmessage.author.tag}: ${oldmessage.content}`,"color":7755}
+    const e3 = {"fields":[{"name":"details","value":`user id: ${newmessage.author.id}\nchannel: <#${newmessage.channel.id}>\ntimestamp: ${newmessage.createdAt}`,"inline":false}],"title":"new message:","description":`${newmessage.author.tag}: ${newmessage.content}`,"color":7755}
+    const Channel = Client.channels.cache.get('935818459600801813');
+    Channel.send({ embeds: [e1,e2,e3], attachments: [...oldattachments, ...newattachments]});
+}) 
 
+ 
 
-app.listen(8999, () => {
+keepAlive();
 
-})
-
+Client.login(process.env.TOKEN)
