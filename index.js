@@ -1,4 +1,5 @@
-import DiscordJS, { Intents } from "discord.js"
+const DiscordJS = require("discord.js")
+Intents = DiscordJS.Intents
 
 
 const Client = new DiscordJS.Client({
